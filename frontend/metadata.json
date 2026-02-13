@@ -1,0 +1,8 @@
+{
+  "name": "Copy of CareOps - Service Operations Platform",
+  "description": "A premium unified operations platform for service-based businesses like clinics, salons, and consultants.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

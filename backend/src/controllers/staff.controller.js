@@ -1,0 +1,423 @@
+const { query, transaction } = require('../config/database');
+const { hashPassword } = require('../utils/password.utils');
+const { generateAccessToken, generateRefreshToken } = require('../utils/jwt.utils');
+
+/**
+ * Register a new staff member (can be used by owner or during invite)
+ */
+const registerStaff = async (req, res, next) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+
+    // Check if user already exists
+    const existingUser = await query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'User with this email already exists',
+      });
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Create user with staff role
+    const result = await query(
+      `INSERT INTO users (email, password_hash, first_name, last_name, role)
+       VALUES ($1, $2, $3, $4, 'staff')
+       RETURNING id, email, first_name, last_name, role, created_at`,
+      [email, passwordHash, firstName, lastName]
+    );
+
+    const user = result.rows[0];
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id, user.email, user.role);
+    const refreshToken = generateRefreshToken(user.id, user.email, user.role);
+
+    // Store refresh token in database
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await query(
+      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, refreshToken, expiresAt]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Staff member registered successfully',
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role,
+          createdAt: user.created_at,
+        },
+        tokens: {
+          accessToken,
+          refreshToken,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add staff member to workspace with permissions
+ */
+const addStaffToWorkspace = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.params;
+    const { staffEmail, permissions } = req.body;
+    const ownerId = req.user.id;
+
+    // Check if workspace exists and user is the owner
+    const workspaceCheck = await query(
+      'SELECT id, owner_id, business_name FROM workspaces WHERE id = $1',
+      [workspaceId]
+    );
+
+    if (workspaceCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workspace not found',
+      });
+    }
+
+    const workspace = workspaceCheck.rows[0];
+
+    if (workspace.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the workspace owner can add staff members',
+      });
+    }
+
+    // Find staff user by email
+    const staffResult = await query(
+      'SELECT id, email, first_name, last_name, role FROM users WHERE email = $1',
+      [staffEmail]
+    );
+
+    if (staffResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found. They need to register first.',
+      });
+    }
+
+    const staff = staffResult.rows[0];
+
+    // Check if staff member is already added to this workspace
+    const existingStaff = await query(
+      'SELECT id FROM workspace_staff WHERE workspace_id = $1 AND user_id = $2',
+      [workspaceId, staff.id]
+    );
+
+    if (existingStaff.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Staff member is already added to this workspace',
+      });
+    }
+
+    // Default permissions if not provided
+    const defaultPermissions = {
+      inbox: true,
+      bookings: true,
+      forms: true,
+      inventory: false,
+    };
+
+    const staffPermissions = permissions || defaultPermissions;
+
+    // Add staff to workspace
+    const result = await query(
+      `INSERT INTO workspace_staff (workspace_id, user_id, permissions)
+       VALUES ($1, $2, $3)
+       RETURNING id, workspace_id, user_id, permissions, added_at`,
+      [workspaceId, staff.id, JSON.stringify(staffPermissions)]
+    );
+
+    const workspaceStaff = result.rows[0];
+
+    res.status(201).json({
+      success: true,
+      message: 'Staff member added to workspace successfully',
+      data: {
+        workspaceStaff: {
+          id: workspaceStaff.id,
+          workspaceId: workspaceStaff.workspace_id,
+          workspaceName: workspace.business_name,
+          staff: {
+            id: staff.id,
+            email: staff.email,
+            firstName: staff.first_name,
+            lastName: staff.last_name,
+            role: staff.role,
+          },
+          permissions: workspaceStaff.permissions,
+          addedAt: workspaceStaff.added_at,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update staff permissions in workspace
+ */
+const updateStaffPermissions = async (req, res, next) => {
+  try {
+    const { workspaceId, staffId } = req.params;
+    const { permissions } = req.body;
+    const ownerId = req.user.id;
+
+    // Check if workspace exists and user is the owner
+    const workspaceCheck = await query(
+      'SELECT id, owner_id FROM workspaces WHERE id = $1',
+      [workspaceId]
+    );
+
+    if (workspaceCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workspace not found',
+      });
+    }
+
+    const workspace = workspaceCheck.rows[0];
+
+    if (workspace.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the workspace owner can update staff permissions',
+      });
+    }
+
+    // Check if staff member exists in workspace
+    const staffCheck = await query(
+      `SELECT ws.id, ws.permissions, u.email, u.first_name, u.last_name
+       FROM workspace_staff ws
+       JOIN users u ON ws.user_id = u.id
+       WHERE ws.workspace_id = $1 AND ws.user_id = $2`,
+      [workspaceId, staffId]
+    );
+
+    if (staffCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found in this workspace',
+      });
+    }
+
+    // Update permissions
+    const result = await query(
+      `UPDATE workspace_staff
+       SET permissions = $1
+       WHERE workspace_id = $2 AND user_id = $3
+       RETURNING id, workspace_id, user_id, permissions, added_at`,
+      [JSON.stringify(permissions), workspaceId, staffId]
+    );
+
+    const updatedStaff = result.rows[0];
+    const staffInfo = staffCheck.rows[0];
+
+    res.status(200).json({
+      success: true,
+      message: 'Staff permissions updated successfully',
+      data: {
+        workspaceStaff: {
+          id: updatedStaff.id,
+          workspaceId: updatedStaff.workspace_id,
+          staff: {
+            id: staffId,
+            email: staffInfo.email,
+            firstName: staffInfo.first_name,
+            lastName: staffInfo.last_name,
+          },
+          permissions: updatedStaff.permissions,
+          addedAt: updatedStaff.added_at,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Remove staff member from workspace
+ */
+const removeStaffFromWorkspace = async (req, res, next) => {
+  try {
+    const { workspaceId, staffId } = req.params;
+    const ownerId = req.user.id;
+
+    // Check if workspace exists and user is the owner
+    const workspaceCheck = await query(
+      'SELECT id, owner_id FROM workspaces WHERE id = $1',
+      [workspaceId]
+    );
+
+    if (workspaceCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workspace not found',
+      });
+    }
+
+    const workspace = workspaceCheck.rows[0];
+
+    if (workspace.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the workspace owner can remove staff members',
+      });
+    }
+
+    // Check if staff member exists in workspace
+    const staffCheck = await query(
+      'SELECT id FROM workspace_staff WHERE workspace_id = $1 AND user_id = $2',
+      [workspaceId, staffId]
+    );
+
+    if (staffCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found in this workspace',
+      });
+    }
+
+    // Remove staff from workspace
+    await query(
+      'DELETE FROM workspace_staff WHERE workspace_id = $1 AND user_id = $2',
+      [workspaceId, staffId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Staff member removed from workspace successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get all staff members in a workspace
+ */
+const getWorkspaceStaff = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    // Check if user has access to workspace
+    const accessCheck = await query(
+      `SELECT w.id, w.owner_id 
+       FROM workspaces w
+       LEFT JOIN workspace_staff ws ON w.id = ws.workspace_id AND ws.user_id = $2
+       WHERE w.id = $1 AND (w.owner_id = $2 OR ws.user_id = $2)`,
+      [workspaceId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have access to this workspace',
+      });
+    }
+
+    // Get all staff members
+    const result = await query(
+      `SELECT ws.id, ws.user_id, ws.permissions, ws.added_at,
+              u.email, u.first_name, u.last_name, u.role, u.is_active
+       FROM workspace_staff ws
+       JOIN users u ON ws.user_id = u.id
+       WHERE ws.workspace_id = $1
+       ORDER BY ws.added_at DESC`,
+      [workspaceId]
+    );
+
+    const staff = result.rows.map(s => ({
+      id: s.id,
+      userId: s.user_id,
+      email: s.email,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      role: s.role,
+      isActive: s.is_active,
+      permissions: s.permissions,
+      addedAt: s.added_at,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        staff,
+        count: staff.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get staff member's workspaces and permissions
+ */
+const getStaffWorkspaces = async (req, res, next) => {
+  try {
+    const staffId = req.user.id;
+
+    // Get all workspaces where user is staff
+    const result = await query(
+      `SELECT w.id, w.business_name, w.address, w.timezone, w.contact_email, w.is_active,
+              ws.permissions, ws.added_at
+       FROM workspaces w
+       JOIN workspace_staff ws ON w.id = ws.workspace_id
+       WHERE ws.user_id = $1
+       ORDER BY ws.added_at DESC`,
+      [staffId]
+    );
+
+    const workspaces = result.rows.map(w => ({
+      id: w.id,
+      businessName: w.business_name,
+      address: w.address,
+      timezone: w.timezone,
+      contactEmail: w.contact_email,
+      isActive: w.is_active,
+      permissions: w.permissions,
+      addedAt: w.added_at,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        workspaces,
+        count: workspaces.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  registerStaff,
+  addStaffToWorkspace,
+  updateStaffPermissions,
+  removeStaffFromWorkspace,
+  getWorkspaceStaff,
+  getStaffWorkspaces,
+};

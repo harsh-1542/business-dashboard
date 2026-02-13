@@ -1,0 +1,19 @@
+careops-backend/
+├── src/
+│   ├── config/database.js          # DB connection & helpers
+│   ├── controllers/
+│   │   ├── auth.controller.js      # All auth logic
+│   │   └── workspace.controller.js # Workspace operations
+│   ├── database/
+│   │   ├── schema.js               # Complete DB schema
+│   │   └── migrate.js              # Migration runner
+│   ├── middleware/                 # Auth, validation, errors
+│   ├── routes/                     # API endpoints
+│   ├── utils/                      # JWT & password helpers
+│   ├── validators/                 # Input validation
+│   └── server.js                   # Main entry point
+├── README.md                       # Full documentation
+├── API_DOCUMENTATION.md            # Detailed API specs
+├── QUICK_START.md                  # 5-minute setup guide
+├── CareOps_API.postman_collection.json  # Postman tests
+└── package.json

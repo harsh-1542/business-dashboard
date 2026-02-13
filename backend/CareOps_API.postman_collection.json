@@ -1,0 +1,553 @@
+{
+    "info": {
+      "name": "CareOps API",
+      "description": "Complete API collection for CareOps Backend",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+      "type": "bearer",
+      "bearer": [
+        {
+          "key": "token",
+          "value": "{{accessToken}}",
+          "type": "string"
+        }
+      ]
+    },
+    "variable": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:5000/api",
+        "type": "string"
+      },
+      {
+        "key": "accessToken",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "refreshToken",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "workspaceId",
+        "value": "",
+        "type": "string"
+      }
+    ],
+    "item": [
+      {
+        "name": "Authentication",
+        "item": [
+          {
+            "name": "Register Owner",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                    "    pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                    "}"
+                  ]
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/register",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "register"]
+              }
+            }
+          },
+          {
+            "name": "Login",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                    "    pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                    "}"
+                  ]
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/login",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "login"]
+              }
+            }
+          },
+          {
+            "name": "Refresh Token",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                    "}"
+                  ]
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/refresh",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "refresh"]
+              }
+            }
+          },
+          {
+            "name": "Logout",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/logout",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "logout"]
+              }
+            }
+          },
+          {
+            "name": "Get Session Context",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/auth/session",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "session"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Workspaces",
+        "item": [
+          {
+            "name": "Create Workspace",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('workspaceId', response.data.workspace.id);",
+                    "}"
+                  ]
+                }
+              }
+            ],
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"businessName\": \"My Awesome Business\",\n  \"address\": \"123 Main Street, City, State 12345\",\n  \"timezone\": \"America/New_York\",\n  \"contactEmail\": \"contact@business.com\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/workspaces",
+                "host": ["{{baseUrl}}"],
+                "path": ["workspaces"]
+              }
+            }
+          },
+          {
+            "name": "Update Workspace",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"businessName\": \"Updated Business Name\",\n  \"address\": \"456 New Street\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/workspaces/{{workspaceId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["workspaces", "{{workspaceId}}"]
+              }
+            }
+          },
+          {
+            "name": "Get Workspace Status",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/status",
+                "host": ["{{baseUrl}}"],
+                "path": ["workspaces", "{{workspaceId}}", "status"]
+              }
+            }
+          },
+          {
+            "name": "Activate Workspace",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/activate",
+                "host": ["{{baseUrl}}"],
+                "path": ["workspaces", "{{workspaceId}}", "activate"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Bookings & Service Types",
+        "item": [
+          {
+            "name": "Create Service Type",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"workspaceId\": \"{{workspaceId}}\",\n  \"name\": \"Initial Consultation\",\n  \"description\": \"60-minute strategy session\",\n  \"durationMinutes\": 60,\n  \"location\": \"123 Business St, Suite 200, New York, NY 10001\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/bookings/service-types",
+                "host": ["{{baseUrl}}"],
+                "path": ["bookings", "service-types"]
+              }
+            }
+          },
+          {
+            "name": "Get Service Types",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/bookings/service-types/{{workspaceId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["bookings", "service-types", "{{workspaceId}}"]
+              }
+            }
+          },
+          {
+            "name": "Set Availability",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"workspaceId\": \"{{workspaceId}}\",\n  \"schedules\": [\n    {\"dayOfWeek\": 1, \"startTime\": \"09:00:00\", \"endTime\": \"17:00:00\"},\n    {\"dayOfWeek\": 2, \"startTime\": \"09:00:00\", \"endTime\": \"17:00:00\"},\n    {\"dayOfWeek\": 3, \"startTime\": \"09:00:00\", \"endTime\": \"17:00:00\"},\n    {\"dayOfWeek\": 4, \"startTime\": \"09:00:00\", \"endTime\": \"17:00:00\"},\n    {\"dayOfWeek\": 5, \"startTime\": \"09:00:00\", \"endTime\": \"17:00:00\"}\n  ]\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/bookings/availability",
+                "host": ["{{baseUrl}}"],
+                "path": ["bookings", "availability"]
+              }
+            }
+          },
+          {
+            "name": "Get Availability",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/bookings/availability/{{workspaceId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["bookings", "availability", "{{workspaceId}}"]
+              }
+            }
+          },
+          {
+            "name": "Get Public Booking Page",
+            "request": {
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/bookings/public/{{workspaceId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["bookings", "public", "{{workspaceId}}"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Staff Management",
+        "item": [
+          {
+            "name": "Register Staff",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"staff@example.com\",\n  \"password\": \"StaffPass123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/staff/register",
+                "host": ["{{baseUrl}}"],
+                "path": ["staff", "register"]
+              }
+            }
+          },
+          {
+            "name": "Add Staff to Workspace",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"staffEmail\": \"staff@example.com\",\n  \"permissions\": {\n    \"inbox\": true,\n    \"bookings\": true,\n    \"forms\": true,\n    \"inventory\": false\n  }\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/staff/workspaces/{{workspaceId}}/add",
+                "host": ["{{baseUrl}}"],
+                "path": ["staff", "workspaces", "{{workspaceId}}", "add"]
+              }
+            }
+          },
+          {
+            "name": "Get Workspace Staff",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/staff/workspaces/{{workspaceId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["staff", "workspaces", "{{workspaceId}}"]
+              }
+            }
+          },
+          {
+            "name": "Get My Workspaces (Staff)",
+            "request": {
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{accessToken}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/staff/my-workspaces",
+                "host": ["{{baseUrl}}"],
+                "path": ["staff", "my-workspaces"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Health Check",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/health",
+            "host": ["{{baseUrl}}"],
+            "path": ["health"]
+          }
+        }
+      }
+    ]
+  }
