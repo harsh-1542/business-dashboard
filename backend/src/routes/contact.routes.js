@@ -3,6 +3,20 @@ const router = express.Router();
 const contactController = require('../controllers/contact.controller');
 const { submitContactFormValidator, workspaceIdValidator } = require('../validators/contact.validator');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
+const { authenticateToken: authenticate } = require('../middleware/auth.middleware');
+
+/**
+ * @route   GET /api/contacts/workspace/:workspaceId
+ * @desc    Get contacts for a workspace
+ * @access  Private
+ */
+router.get(
+  '/workspace/:workspaceId',
+  authenticate,
+  workspaceIdValidator,
+  handleValidationErrors,
+  contactController.getWorkspaceContacts
+);
 
 /**
  * @route   POST /api/contacts/submit

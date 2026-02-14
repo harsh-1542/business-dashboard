@@ -45,6 +45,14 @@ export const getAccessToken = (): string | null => {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 };
 
+export const getRefreshToken = (): string | null => {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+export const updateAccessToken = (accessToken: string) => {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+};
+
 export const getCurrentUser = (): AuthUser | null => {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;

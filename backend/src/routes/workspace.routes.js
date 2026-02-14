@@ -60,4 +60,18 @@ router.get(
   workspaceController.getWorkspaceStatus
 );
 
+/**
+ * @route   DELETE /api/workspaces/:workspaceId
+ * @desc    Delete workspace
+ * @access  Private (Owner only)
+ */
+router.delete(
+  '/:workspaceId',
+  authenticateToken,
+  requireOwner,
+  workspaceIdValidator,
+  handleValidationErrors,
+  workspaceController.deleteWorkspace
+);
+
 module.exports = router;

@@ -1,36 +1,124 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Send, 
-  ShieldCheck, 
-  MessageSquare, 
+import {
+  Send,
+  ShieldCheck,
+  MessageSquare,
   CheckCircle,
   Zap,
   ArrowRight
 } from 'lucide-react';
-import { Card, Button, Input } from '../components/UI';
+import { Card, Button, Input, Skeleton } from '../components/UI';
 import { toast } from 'react-hot-toast';
+import { formService } from '../lib/services/api';
 
 const PublicContactForm: React.FC = () => {
+  const { formId } = useParams<{ formId: string }>();
+  // Note: formId can be either a Form ID or a Workspace ID (legacy)
+
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  const [formConfig, setFormConfig] = useState<any>(null);
 
-  // Mock form config (In real app, fetch based on URL ID)
-  const formConfig = {
-    title: "City Dental Clinic Inquiry",
-    description: "Please fill out the form below and our team will get back to you within 24 hours.",
-    fields: { name: true, email: true, phone: true, message: true }
+  // Dynamic form data state
+  const [formData, setFormData] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (formId) {
+      loadFormConfig();
+    }
+  }, [formId]);
+
+  const loadFormConfig = async () => {
+    if (!formId) return;
+    try {
+      setIsLoadingConfig(true);
+      const config = await formService.getPublicConfig(formId);
+      setFormConfig(config);
+
+      // Initialize form data based on fields
+      const initialData: Record<string, string> = {};
+      if (config.fields && Array.isArray(config.fields)) {
+        config.fields.forEach((field: any) => {
+          initialData[field.name] = '';
+        });
+      } else if (config.fields && typeof config.fields === 'object') {
+        // Handle legacy/simple object format if backend returns it (though updated backend returns array for custom forms)
+        // But mapPublicFormConfig in backend might return array for 'default' too.
+        // Let's assume array for now based on Implementation Plan
+        Object.keys(config.fields).forEach(key => {
+          initialData[key] = '';
+        });
+      }
+      setFormData(initialData);
+
+    } catch (error: any) {
+      console.error('Failed to load form config:', error);
+      toast.error(error.message || 'Failed to load form');
+      // If 404/403, we handled in backend, here we just show error state
+      setFormConfig(null);
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 2000));
-    setLoading(false);
-    setSubmitted(true);
-    toast.success('Message sent successfully!');
+    if (!formId) {
+      toast.error('Invalid form');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await formService.submitPublicForm(formId, formData);
+      setLoading(false);
+      setSubmitted(true);
+      toast.success('Message sent successfully!');
+    } catch (error: any) {
+      setLoading(false);
+      toast.error(error.message || 'Failed to send message');
+    }
+  };
+
+  // Helper to render field based on type
+  const renderField = (field: any) => {
+    const commonProps = {
+      name: field.name,
+      required: field.required,
+      value: formData[field.name] || '',
+      onChange: handleInputChange,
+      placeholder: field.label, // or specific placeholder
+      className: "bg-slate-50 border-slate-100 h-12 rounded-xl focus:bg-white transition-all w-full"
+    };
+
+    if (field.type === 'textarea') {
+      return (
+        <div className="space-y-2" key={field.name}>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
+          <textarea
+            {...commonProps}
+            className="w-full rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all focus:bg-white"
+            rows={4}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2" key={field.name}>
+        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
+        <Input {...commonProps} type={field.type} />
+      </div>
+    );
   };
 
   return (
@@ -40,8 +128,22 @@ const PublicContactForm: React.FC = () => {
           <div className="w-16 h-16 bg-slate-900 rounded-[22px] flex items-center justify-center shadow-xl shadow-slate-900/10 mb-8">
             <Zap className="text-blue-500" fill="currentColor" size={28} />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">CareOps Connect</h1>
-          <p className="text-slate-500 text-sm font-medium">Powering enterprise communications for City Dental Clinic.</p>
+          {isLoadingConfig ? (
+            <>
+              <Skeleton className="h-10 w-64 mb-3 mx-auto" />
+              <Skeleton className="h-4 w-96 mx-auto" />
+            </>
+          ) : formConfig ? (
+            <>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">{formConfig.businessName}</h1>
+              <p className="text-slate-500 text-sm font-medium">{formConfig.description || "Please fill out the form below and we'll get back to you shortly."}</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Form Unavailable</h1>
+              <p className="text-slate-500 text-sm font-medium">This form does not exist or is no longer active.</p>
+            </>
+          )}
         </div>
 
         <AnimatePresence mode="wait">
@@ -53,67 +155,47 @@ const PublicContactForm: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95 }}
               className="w-full"
             >
-              <Card className="p-8 md:p-10 border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[32px]">
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-slate-900">{formConfig.title}</h2>
-                  <p className="text-slate-500 text-sm mt-2 leading-relaxed">{formConfig.description}</p>
+              {isLoadingConfig ? (
+                <Card className="p-8 md:p-10 border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[32px]">
+                  <Skeleton className="h-64 w-full" />
+                </Card>
+              ) : formConfig ? (
+                <Card className="p-8 md:p-10 border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[32px]">
+                  <div className="mb-8">
+                    <h2 className="text-xl font-bold text-slate-900">{formConfig.name || 'Contact'} Inquiry</h2>
+                    <p className="text-slate-500 text-sm mt-2 leading-relaxed">Please fill out the form below and our team will get back to you within 24 hours.</p>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Render Fields */}
+                    {Array.isArray(formConfig.fields) && formConfig.fields.map((field: any) => renderField(field))}
+
+                    <Button
+                      disabled={loading}
+                      type="submit"
+                      className="w-full h-14 bg-slate-900 text-white font-bold text-sm tracking-tight rounded-xl shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+                    >
+                      {loading ? 'Sending message...' : 'Submit Inquiry'}
+                      {!loading && <Send size={18} />}
+                    </Button>
+                  </form>
+                </Card>
+              ) : (
+                <Card className="p-8 md:p-10 border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[32px] text-center">
+                  <p className="text-slate-500">Form not found or unavailable.</p>
+                </Card>
+              )}
+
+              <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-center gap-6 opacity-30 grayscale">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={14} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">End-to-End Encrypted</span>
                 </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {formConfig.fields.name && (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                      <Input required placeholder="Alex Rivera" className="bg-slate-50 border-slate-100 h-12 rounded-xl focus:bg-white transition-all" />
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {formConfig.fields.email && (
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email</label>
-                        <Input required type="email" placeholder="alex@example.com" className="bg-slate-50 border-slate-100 h-12 rounded-xl focus:bg-white transition-all" />
-                      </div>
-                    )}
-                    {formConfig.fields.phone && (
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Phone</label>
-                        <Input type="tel" placeholder="+1 (555) 000-0000" className="bg-slate-50 border-slate-100 h-12 rounded-xl focus:bg-white transition-all" />
-                      </div>
-                    )}
-                  </div>
-
-                  {formConfig.fields.message && (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">How can we help?</label>
-                      <textarea 
-                        required
-                        className="w-full rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all focus:bg-white"
-                        rows={4}
-                        placeholder="Tell us about your requirements..."
-                      />
-                    </div>
-                  )}
-
-                  <Button 
-                    disabled={loading}
-                    className="w-full h-14 bg-slate-900 text-white font-bold text-sm tracking-tight rounded-xl shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
-                  >
-                    {loading ? 'Sending encrypted message...' : 'Submit Inquiry'}
-                    {!loading && <Send size={18} />}
-                  </Button>
-                </form>
-
-                <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-center gap-6 opacity-30 grayscale">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={14} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">End-to-End Encrypted</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle size={14} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">GDPR Compliant</span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">GDPR Compliant</span>
                 </div>
-              </Card>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -129,11 +211,21 @@ const PublicContactForm: React.FC = () => {
                   </div>
                   <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Message Received</h2>
                   <p className="text-slate-500 max-w-xs mx-auto mb-10 leading-relaxed">Thank you for reaching out. A copy of your inquiry has been sent to your email.</p>
-                  
+
                   <div className="space-y-4">
-                    <Button 
-                      onClick={() => setSubmitted(false)}
-                      variant="outline" 
+                    <Button
+                      onClick={() => {
+                        setSubmitted(false);
+                        // Reset form
+                        const initialData: Record<string, string> = {};
+                        if (formConfig && formConfig.fields) {
+                          formConfig.fields.forEach((field: any) => {
+                            initialData[field.name] = '';
+                          });
+                        }
+                        setFormData(initialData);
+                      }}
+                      variant="outline"
                       className="w-full h-12 text-xs font-bold uppercase tracking-widest rounded-xl"
                     >
                       Send Another Message

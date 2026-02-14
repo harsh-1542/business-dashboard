@@ -75,6 +75,8 @@ const createTables = async () => {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         business_name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        business_type VARCHAR(50),
         address TEXT,
         timezone VARCHAR(100) DEFAULT 'UTC',
         contact_email VARCHAR(255) NOT NULL,
@@ -85,9 +87,40 @@ const createTables = async () => {
       );
     `);
 
-    // Create index on owner_id
+    // Check if slug column exists, if not add it
+    const slugColumnCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='workspaces' AND column_name='slug';
+    `);
+
+    if (slugColumnCheck.rows.length === 0) {
+      await client.query(`
+        ALTER TABLE workspaces 
+        ADD COLUMN slug VARCHAR(255) UNIQUE;
+      `);
+      console.log('✅ Added slug column to workspaces table');
+    }
+
+    // Check if business_type column exists, if not add it
+    const businessTypeColumnCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='workspaces' AND column_name='business_type';
+    `);
+
+    if (businessTypeColumnCheck.rows.length === 0) {
+      await client.query(`
+        ALTER TABLE workspaces 
+        ADD COLUMN business_type VARCHAR(50);
+      `);
+      console.log('✅ Added business_type column to workspaces table');
+    }
+
+    // Create index on owner_id and slug
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
+      CREATE INDEX IF NOT EXISTS idx_workspaces_slug ON workspaces(slug);
     `);
 
     // Workspace staff members (many-to-many relationship)

@@ -1,5 +1,6 @@
 const { query, transaction } = require('../config/database');
 const messagingService = require('../services/messaging.service');
+const { sendBookingConfirmationEmail } = require('../services/notification.service');
 
 /**
  * Create a booking (PUBLIC - no authentication)
@@ -21,7 +22,9 @@ const createPublicBooking = async (req, res, next) => {
 
     // Verify workspace exists and is active
     const workspaceResult = await query(
-      'SELECT id, business_name, timezone, is_active FROM workspaces WHERE id = $1',
+      `SELECT id, business_name, timezone, is_active,
+              (SELECT email FROM users WHERE id = workspaces.owner_id) as owner_email
+       FROM workspaces WHERE id = $1`,
       [workspaceId]
     );
 
@@ -150,19 +153,17 @@ const createPublicBooking = async (req, res, next) => {
     // Send booking confirmation asynchronously
     setImmediate(async () => {
       try {
-        await messagingService.sendBookingConfirmationMessage({
-          workspaceId,
-          bookingId: result.booking.id,
-          contactEmail: email,
-          contactPhone: phone,
-          contactName: `${firstName} ${lastName}`,
-          businessName: workspace.business_name,
-          serviceName: serviceType.name,
-          bookingDate: formattedDate,
-          bookingTime: bookingTime,
-          duration: serviceType.duration_minutes,
-          location: serviceType.location,
-        });
+        if (email) {
+             await sendBookingConfirmationEmail(
+                 email,
+                 firstName,
+                 workspace.business_name,
+                 serviceType.name,
+                 formattedDate,
+                 bookingTime,
+                 workspace.owner_email // Redirect replies to owner
+             );
+        }
       } catch (error) {
         console.error('Failed to send booking confirmation:', error);
       }
@@ -218,7 +219,7 @@ const getWorkspaceBookings = async (req, res, next) => {
 
     // Get bookings with related data
     const result = await query(
-      `SELECT b.id, b.booking_date, b.booking_time, b.status, b.notes, b.created_at,
+      `SELECT b.id, to_char(b.booking_date, 'YYYY-MM-DD') as booking_date, b.booking_time, b.status, b.notes, b.created_at,
               c.id as contact_id, c.first_name, c.last_name, c.email, c.phone,
               st.id as service_type_id, st.name as service_name, st.duration_minutes, st.location
        FROM bookings b

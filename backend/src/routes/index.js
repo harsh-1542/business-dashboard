@@ -9,6 +9,10 @@ const staffRoutes = require('./staff.routes');
 const contactRoutes = require('./contact.routes');
 const customerBookingRoutes = require('./customer-booking.routes');
 const integrationRoutes = require('./integration.routes');
+const formRoutes = require('./form.routes');
+const serviceTypeRoutes = require('./serviceType.routes');
+const availabilityRoutes = require('./availability.routes');
+const conversationRoutes = require('./conversation.routes');
 
 // Health check route
 router.get('/health', (req, res) => {
@@ -27,5 +31,9 @@ router.use('/staff', staffRoutes);
 router.use('/contacts', contactRoutes);
 router.use('/customer-bookings', customerBookingRoutes);
 router.use('/integrations', integrationRoutes);
+router.use('/forms', formRoutes);
+router.use('/service-types', serviceTypeRoutes);
+router.use('/availability', availabilityRoutes);
+router.use('/conversations', conversationRoutes);
 
 module.exports = router;

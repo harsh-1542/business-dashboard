@@ -295,47 +295,76 @@ const getSessionContext = async (req, res, next) => {
     let workspaces = [];
 
     if (user.role === "owner") {
-      // Get owned workspaces
+      // Get owned workspaces with setup counts
       const workspaceResult = await query(
-        `SELECT id, business_name, address, timezone, contact_email, is_active, setup_completed, created_at
-         FROM workspaces
-         WHERE owner_id = $1
-         ORDER BY created_at DESC`,
+        `SELECT w.id, w.business_name, w.slug, w.business_type, w.address, w.timezone, w.contact_email, w.is_active, w.setup_completed, w.created_at,
+                (SELECT COUNT(*) FROM service_types st WHERE st.workspace_id = w.id AND st.is_active = true) as service_count,
+                (SELECT COUNT(*) FROM availability_schedules asch WHERE asch.workspace_id = w.id AND asch.is_active = true) as availability_count
+         FROM workspaces w
+         WHERE w.owner_id = $1
+         ORDER BY w.created_at DESC`,
         [userId],
       );
-      workspaces = workspaceResult.rows.map((w) => ({
-        id: w.id,
-        businessName: w.business_name,
-        address: w.address,
-        timezone: w.timezone,
-        contactEmail: w.contact_email,
-        isActive: w.is_active,
-        setupCompleted: w.setup_completed,
-        role: "owner",
-        createdAt: w.created_at,
-      }));
+      workspaces = workspaceResult.rows.map((w) => {
+        // Calculate setup percentage
+        // 1. Communication checks (always true)
+        // 2. Service types > 0
+        // 3. Availability > 0
+        let completedSteps = 1; // Communication is always pre-configured
+        if (parseInt(w.service_count) > 0) completedSteps++;
+        if (parseInt(w.availability_count) > 0) completedSteps++;
+        
+        const setupPercentage = Math.round((completedSteps / 3) * 100);
+
+        return {
+          id: w.id,
+          businessName: w.business_name,
+          slug: w.slug,
+          businessType: w.business_type,
+          address: w.address,
+          timezone: w.timezone,
+          contactEmail: w.contact_email,
+          isActive: w.is_active,
+          setupCompleted: w.setup_completed,
+          role: "owner",
+          createdAt: w.created_at,
+          setupPercentage, // Add this field
+        };
+      });
     } else {
       // Get workspaces where user is staff
       const workspaceResult = await query(
-        `SELECT w.id, w.business_name, w.address, w.timezone, w.contact_email, w.is_active, 
-                ws.permissions, ws.added_at
+        `SELECT w.id, w.business_name, w.slug, w.business_type, w.address, w.timezone, w.contact_email, w.is_active, w.setup_completed,
+                ws.permissions, ws.added_at,
+                (SELECT COUNT(*) FROM service_types st WHERE st.workspace_id = w.id AND st.is_active = true) as service_count,
+                (SELECT COUNT(*) FROM availability_schedules asch WHERE asch.workspace_id = w.id AND asch.is_active = true) as availability_count
          FROM workspaces w
          JOIN workspace_staff ws ON w.id = ws.workspace_id
          WHERE ws.user_id = $1
          ORDER BY ws.added_at DESC`,
         [userId],
       );
-      workspaces = workspaceResult.rows.map((w) => ({
-        id: w.id,
-        businessName: w.business_name,
-        address: w.address,
-        timezone: w.timezone,
-        contactEmail: w.contact_email,
-        isActive: w.is_active,
-        role: "staff",
-        permissions: w.permissions,
-        addedAt: w.added_at,
-      }));
+      workspaces = workspaceResult.rows.map((w) => {
+        let completedSteps = 1;
+        if (parseInt(w.service_count) > 0) completedSteps++;
+        if (parseInt(w.availability_count) > 0) completedSteps++;
+        const setupPercentage = Math.round((completedSteps / 3) * 100);
+
+        return {
+          id: w.id,
+          businessName: w.business_name,
+          slug: w.slug,
+          businessType: w.business_type,
+          address: w.address,
+          timezone: w.timezone,
+          contactEmail: w.contact_email,
+          isActive: w.is_active,
+          setupPercentage,
+          role: "staff",
+          permissions: w.permissions,
+          addedAt: w.added_at,
+        };
+      });
     }
 
     res.status(200).json({

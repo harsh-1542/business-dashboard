@@ -7,6 +7,11 @@ const createWorkspaceValidator = [
     .withMessage('Business name is required')
     .isLength({ max: 255 })
     .withMessage('Business name must not exceed 255 characters'),
+  body('businessType')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Business type must not exceed 100 characters'),
   body('address')
     .optional()
     .trim()

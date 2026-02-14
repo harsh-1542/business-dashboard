@@ -54,7 +54,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
 );
 
 export const Card: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className, ...props }) => (
-  <div 
+  <div
     className={cn('bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300', className)}
     {...props}
   >
@@ -81,30 +81,30 @@ export const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
   <div className={cn('animate-pulse bg-slate-200 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:-translate-x-full after:animate-[shimmer_2s_infinite] after:bg-gradient-to-r after:from-transparent after:via-white/20 after:to-transparent', className)} />
 );
 
-export const Modal: React.FC<{ 
-  isOpen: boolean; 
-  onClose: () => void; 
-  title: string; 
-  description?: string; 
+export const Modal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   variant?: 'default' | 'danger'
 }> = ({ isOpen, onClose, title, description, children, footer, variant = 'default' }) => (
   <AnimatePresence>
     {isOpen && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div 
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-1">
+        <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-slate-900/60 mt-[-30px]  backdrop-blur-sm"
         />
-        <motion.div 
+        <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="relative w-full max-w-lg bg-white rounded-[24px] shadow-2xl overflow-hidden"
+          className="relative w-full max-w-lg bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
         >
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               {variant === 'danger' && <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center"><AlertCircle size={20} /></div>}
               <div>
@@ -116,7 +116,7 @@ export const Modal: React.FC<{
               <X size={20} />
             </button>
           </div>
-          <div className="p-6">{children}</div>
+          <div className="p-6 overflow-y-auto">{children}</div>
           {footer && <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">{footer}</div>}
         </motion.div>
       </div>
@@ -124,9 +124,9 @@ export const Modal: React.FC<{
   </AnimatePresence>
 );
 
-export const EmptyState: React.FC<{ 
-  title: string; 
-  description: string; 
+export const EmptyState: React.FC<{
+  title: string;
+  description: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
 }> = ({ title, description, icon, action }) => (
@@ -216,10 +216,10 @@ export const TourTooltip: React.FC<{
   };
 
   return (
-    <div 
+    <div
       className="fixed z-[9999] pointer-events-none"
-      style={{ 
-        top: coords.top, 
+      style={{
+        top: coords.top,
         left: coords.left,
         transform: position === 'right' ? 'translateY(-50%)' : position === 'left' ? 'translate(-100%, -50%)' : position === 'bottom' ? 'translateX(-50%)' : 'translate(-50%, -100%)'
       }}
@@ -231,7 +231,7 @@ export const TourTooltip: React.FC<{
       >
         {/* Arrow */}
         <div className={cn("absolute w-0 h-0 border-[6px] border-transparent", arrowStyles[position])} />
-        
+
         <div className="flex items-center justify-between mb-3">
           {/* Step indicators (dots) */}
           <div className="flex gap-1">
@@ -246,10 +246,10 @@ export const TourTooltip: React.FC<{
 
         <h4 className="font-bold text-sm mb-1">{title}</h4>
         <p className="text-xs text-white/90 leading-relaxed mb-4">{description}</p>
-        
+
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold opacity-60">{currentStep + 1} of {totalSteps}</span>
-          <button 
+          <button
             onClick={onNext}
             className="bg-white text-[#4A90E2] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-white/90 active:scale-95 transition-all"
           >
