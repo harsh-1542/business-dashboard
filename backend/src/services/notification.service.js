@@ -102,4 +102,65 @@ const sendBookingConfirmationEmail = async (toEmail, firstName, businessName, se
   }
 };
 
-module.exports = { sendWelcomeEmail, sendReplyEmail, sendBookingConfirmationEmail };
+const sendInviteEmail = async (toEmail, businessName, inviteLink) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('SENDGRID_API_KEY not set. Invite email not sent.');
+    return;
+  }
+
+  const msg = {
+    to: toEmail,
+    from: 'contact@harshshrimali.in',
+    subject: `Invitation: Join ${businessName}`,
+    text: `You've been invited to join ${businessName} as a staff member.\n\nClick the link below to accept the invitation and set up your account:\n${inviteLink}\n\nThis invitation will expire in 7 days.\n\nBest regards,\n${businessName} Team`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Team Invitation</h1>
+        </div>
+        
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+            You've been invited to join <strong style="color: #667eea;">${businessName}</strong> as a staff member!
+          </p>
+          
+          <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+            Click the button below to accept the invitation and set up your account. You'll be able to help manage customer communications, bookings, and more.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${inviteLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+              Accept Invitation
+            </a>
+          </div>
+          
+          <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">
+            Or copy and paste this link into your browser:<br/>
+            <span style="color: #667eea; word-break: break-all;">${inviteLink}</span>
+          </p>
+          
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 25px 0;" />
+          
+          <p style="font-size: 12px; color: #9ca3af;">
+            ⏰ This invitation will expire in <strong>7 days</strong>.<br/>
+            If you didn't expect this invitation, you can safely ignore this email.
+          </p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Invite email sent to ${toEmail}`);
+  } catch (error) {
+    console.error('SendGrid invite error:', error);
+    if (error.response) {
+      console.error(error.response.body);
+    }
+    throw error;
+  }
+};
+
+module.exports = { sendWelcomeEmail, sendReplyEmail, sendBookingConfirmationEmail, sendInviteEmail };
+

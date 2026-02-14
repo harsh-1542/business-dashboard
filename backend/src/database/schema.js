@@ -151,6 +151,28 @@ const createTables = async () => {
       );
     `);
 
+    // Staff invites
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS staff_invites (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        permissions JSONB DEFAULT '{"inbox": true, "bookings": true, "forms": true, "inventory": false}',
+        invited_by UUID NOT NULL REFERENCES users(id),
+        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired')),
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(workspace_id, email)
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_staff_invites_token ON staff_invites(token);
+      CREATE INDEX IF NOT EXISTS idx_staff_invites_email ON staff_invites(email);
+    `);
+
+
     // Communication integrations
     await client.query(`
       CREATE TABLE IF NOT EXISTS integrations (

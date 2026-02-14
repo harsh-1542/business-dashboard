@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
   TrendingUp,
@@ -20,6 +20,7 @@ import { authService, bookingService, workspaceService, formService } from '../l
 import { toast } from 'react-hot-toast';
 
 const DashboardHome: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTourStep, setActiveTourStep] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionData, setSessionData] = useState<any>(null);
@@ -132,6 +133,10 @@ const DashboardHome: React.FC = () => {
     loadDashboardData();
   }, []);
 
+  const handleWorkspaceClick = (workspaceId: string) => {
+    navigate(`/dashboard/workspaces/`);
+  };
+
   return (
     <div className="space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -216,7 +221,7 @@ const DashboardHome: React.FC = () => {
                         </Badge>
                       </div>
                       <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
-                        <ExternalLink size={16} />
+                        <ExternalLink onClick={() => handleWorkspaceClick(workspace.id)} size={16} />
                       </div>
                     </div>
                     <div className="space-y-3">

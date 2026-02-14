@@ -28,6 +28,42 @@ router.post(
 );
 
 // ============================================
+// STAFF INVITATIONS
+// ============================================
+
+/**
+ * @route   POST /api/staff/workspaces/:workspaceId/invite
+ * @desc    Send staff invitation
+ * @access  Private (Owner only)
+ */
+router.post(
+  '/workspaces/:workspaceId/invite',
+  authenticateToken,
+  requireOwner,
+  staffController.inviteStaff
+);
+
+/**
+ * @route   GET /api/staff/invite/verify/:token
+ * @desc    Verify invite token
+ * @access  Public
+ */
+router.get(
+  '/invite/verify/:token',
+  staffController.verifyInviteToken
+);
+
+/**
+ * @route   POST /api/staff/invite/accept
+ * @desc    Accept staff invitation and register/login
+ * @access  Public
+ */
+router.post(
+  '/invite/accept',
+  staffController.acceptInvite
+);
+
+// ============================================
 // WORKSPACE STAFF MANAGEMENT
 // ============================================
 

@@ -45,8 +45,6 @@ const StaffManagement: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
     email: '',
     permissions: {
       inbox: true,
@@ -98,16 +96,12 @@ const StaffManagement: React.FC = () => {
       setEditingStaff(member);
       const perms = typeof member.permissions === 'string' ? JSON.parse(member.permissions) : member.permissions;
       setFormData({
-        firstName: member.firstName,
-        lastName: member.lastName,
         email: member.email,
         permissions: perms || { inbox: true, bookings: true, forms: false, inventory: false }
       });
     } else {
       setEditingStaff(null);
       setFormData({
-        firstName: '',
-        lastName: '',
         email: '',
         permissions: { inbox: true, bookings: true, forms: false, inventory: false }
       });
@@ -140,13 +134,13 @@ const StaffManagement: React.FC = () => {
         await loadStaff();
         toast.success('Staff member updated');
       } else {
-        // Add staff to workspace
-        await staffService.addToWorkspace(selectedWorkspaceId, {
-          staffEmail: formData.email,
+        // Send invitation
+        await staffService.inviteStaff(selectedWorkspaceId, {
+          email: formData.email,
           permissions: formData.permissions,
         });
         await loadStaff();
-        toast.success('Staff member added successfully');
+        toast.success(`Invitation sent to ${formData.email}`);
       }
       setIsModalOpen(false);
     } catch (error: any) {
@@ -295,19 +289,21 @@ const StaffManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-5 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleOpenModal(member)}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
                         {member.role !== 'owner' && (
-                          <button
-                            onClick={() => openDeleteModal(member)}
-                            className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleOpenModal(member)}
+                              className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(member)}
+                              className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -327,26 +323,17 @@ const StaffManagement: React.FC = () => {
         description="Set roles and permissions for your staff member."
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">First Name</label>
-              <Input
-                required
-                value={formData.firstName}
-                onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                disabled={!!editingStaff}
-              />
+          {editingStaff && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm">
+                {editingStaff.firstName[0]}{editingStaff.lastName[0]}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">{editingStaff.firstName} {editingStaff.lastName}</p>
+                <p className="text-xs text-gray-400">Staff Member</p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
-              <Input
-                required
-                value={formData.lastName}
-                onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                disabled={!!editingStaff}
-              />
-            </div>
-          </div>
+          )}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email</label>
             <Input
@@ -357,7 +344,7 @@ const StaffManagement: React.FC = () => {
               disabled={!!editingStaff}
             />
             {!editingStaff && (
-              <p className="text-xs text-gray-400 mt-1">Staff member must be registered first</p>
+              <p className="text-xs text-gray-400 mt-1">We'll send an invitation email to this address</p>
             )}
           </div>
           <div className="space-y-2">

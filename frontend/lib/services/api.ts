@@ -389,6 +389,39 @@ export const staffService = {
     const response = await apiFetch<{ success: boolean; data: { workspaces: Workspace[] } }>('/staff/my-workspaces');
     return response.data.workspaces;
   },
+
+  // Invite methods
+  inviteStaff: async (workspaceId: string, data: {
+    email: string;
+    permissions: any;
+  }): Promise<any> => {
+    const response = await apiFetch<{ success: boolean; data: any }>(`/staff/workspaces/${workspaceId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  },
+
+  verifyInviteToken: async (token: string): Promise<any> => {
+    const response = await apiFetch<{ success: boolean; data: any }>(`/staff/invite/verify/${token}`, {
+      auth: false,
+    });
+    return response.data;
+  },
+
+  acceptInvite: async (data: {
+    token: string;
+    password?: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<any> => {
+    const response = await apiFetch<{ success: boolean; data: any }>('/staff/invite/accept', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      auth: false,
+    });
+    return response.data;
+  },
 };
 
 // ============================================

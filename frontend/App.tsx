@@ -23,6 +23,7 @@ import Integrations from './pages/Integrations';
 import FormResponses from './pages/FormResponses';
 import Inbox from './pages/Inbox';
 import Contacts from './pages/Contacts';
+import AcceptInvite from './pages/AcceptInvite';
 
 // Added React.FC to resolve children missing errors
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -88,6 +89,7 @@ const App: React.FC = () => {
             <Login />
           </PublicRoute>
         } />
+        <Route path="/invite/accept" element={<AcceptInvite />} />
         <Route path="/book/:workspaceId" element={<PublicBooking />} />
         <Route path="/f/:formId" element={<PublicContactForm />} />
         <Route path="/public/form/:formId" element={<PublicContactForm />} />
