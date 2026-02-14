@@ -23,7 +23,7 @@ import { apiFetch } from '../lib/api';
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getCurrentUser());
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -31,9 +31,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
 
   useEffect(() => {
-    const loadWorkspaces = async () => {
+    const loadSession = async () => {
       try {
         const session = await authService.getSession();
+
+        if (session.user) {
+          setCurrentUser(session.user);
+        }
+
         if (session.workspaces && session.workspaces.length > 0) {
           setWorkspaces(session.workspaces);
           // Try to get stored workspace selection or default to first
@@ -42,10 +47,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           setSelectedWorkspace(found || session.workspaces[0]);
         }
       } catch (error) {
-        console.error('Failed to load workspaces:', error);
+        console.error('Failed to load session:', error);
       }
     };
-    loadWorkspaces();
+    loadSession();
   }, []);
 
   const handleWorkspaceChange = (workspace: any) => {
