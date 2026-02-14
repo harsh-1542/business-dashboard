@@ -130,7 +130,7 @@ const Login: React.FC = () => {
                 <div className="flex justify-between items-center px-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
                   {/* FIX: Removed non-existent 'size' prop from Link component */}
-                  <Link to="/forgot-password" className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">Forgot password?</Link>
+                  {/* <Link to="/forgot-password" className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">Forgot password?</Link> */}
                 </div>
                 <div className="relative">
                   <Input 
