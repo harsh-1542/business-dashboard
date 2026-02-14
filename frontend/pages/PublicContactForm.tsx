@@ -66,7 +66,17 @@ const PublicContactForm: React.FC = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+
+    // Auto-format phone (digits only, max 10)
+    if (name === 'phone' || type === 'tel') {
+      const numeric = value.replace(/\D/g, '');
+      // If user types more than 10 digits, truncate
+      const truncated = numeric.slice(0, 10);
+      setFormData(prev => ({ ...prev, [name]: truncated }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 

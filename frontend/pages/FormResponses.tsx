@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, User, Calendar, Mail, Phone, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText, User, Calendar, Mail, Phone, ExternalLink, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, Button, Skeleton } from '../components/UI';
 import { toast } from 'react-hot-toast';
 import { formService } from '../lib/services/api';
@@ -12,6 +13,7 @@ const FormResponses: React.FC = () => {
     const [form, setForm] = useState<any>(null);
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -62,9 +64,7 @@ const FormResponses: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" className="text-xs uppercase tracking-wider font-bold gap-2">
-                        <Download size={16} /> Export CSV
-                    </Button>
+                    {/* Export removed */}
                 </div>
             </div>
 
@@ -153,7 +153,11 @@ const FormResponses: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="p-4 align-top text-right">
-                                            <Button variant="outline" className="h-8 px-3 text-xs font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                onClick={() => setSelectedSubmission(sub)}
+                                                variant="outline"
+                                                className="h-8 px-3 text-xs font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
                                                 View Details
                                             </Button>
                                         </td>
@@ -164,6 +168,93 @@ const FormResponses: React.FC = () => {
                     </div>
                 </Card>
             )}
+
+
+            <AnimatePresence>
+                {selectedSubmission && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setSelectedSubmission(null)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-white rounded-[24px] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+                        >
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                                        <FileText size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900">Submission Details</h3>
+                                        <p className="text-xs text-gray-400">
+                                            {new Date(selectedSubmission.submittedAt).toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedSubmission(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto">
+                                <div className="space-y-6">
+                                    {/* Contact Section */}
+                                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact Information</h4>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-700">
+                                                {selectedSubmission.contact.firstName[0]}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900">{selectedSubmission.contact.firstName} {selectedSubmission.contact.lastName}</p>
+                                                <div className="flex flex-col gap-1 mt-1">
+                                                    {selectedSubmission.contact.email && (
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                                                            <Mail size={12} /> {selectedSubmission.contact.email}
+                                                        </span>
+                                                    )}
+                                                    {selectedSubmission.contact.phone && (
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                                                            <Phone size={12} /> {selectedSubmission.contact.phone}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Data Section */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Submitted Data</h4>
+                                        <div className="grid gap-4">
+                                            {Object.entries(selectedSubmission.submissionData).map(([key, value]) => {
+                                                if (['firstName', 'lastName', 'email', 'phone', 'workspaceId'].includes(key)) return null;
+                                                return (
+                                                    <div key={key} className="border-b border-gray-100 pb-3 last:border-0">
+                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">{key}</p>
+                                                        <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed bg-gray-50 p-3 rounded-lg">
+                                                            {String(value)}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end flex-shrink-0">
+                                <Button onClick={() => setSelectedSubmission(null)}>Close</Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

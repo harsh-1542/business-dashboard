@@ -23,10 +23,23 @@ const submitContactFormValidator = [
     .withMessage('Valid email is required if provided')
     .normalizeEmail(),
   body('phone')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .matches(/^[\d\s\-\+\(\)]+$/)
-    .withMessage('Valid phone number is required if provided'),
+    .customSanitizer((value) => {
+      if (!value) return value;
+      // Remove all non-digit characters
+      let cleaned = value.replace(/\D/g, '');
+      // Handle common prefixes
+      if (cleaned.length === 11 && cleaned.startsWith('0')) {
+        return cleaned.substring(1);
+      }
+      if (cleaned.length === 12 && cleaned.startsWith('91')) {
+        return cleaned.substring(2);
+      }
+      return cleaned;
+    })
+    .matches(/^\d{10}$/)
+    .withMessage('Phone number must be exactly 10 digits'),
   body('message')
     .optional()
     .trim()

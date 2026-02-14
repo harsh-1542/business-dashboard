@@ -206,7 +206,7 @@ const FormEditor: React.FC = () => {
                     <Card className="p-6 border-2 border-dashed border-purple-100 bg-purple-50/30">
                         <div className="flex items-center gap-2 mb-4">
                             <Sparkles size={18} className="text-purple-600" />
-                            <h3 className="font-bold text-gray-900">Start with an AI Template</h3>
+                            <h3 className="font-bold text-gray-900">Start with an Template</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {templates.map(template => (

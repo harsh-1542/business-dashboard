@@ -46,6 +46,22 @@ const createTables = async () => {
       console.log('✅ Migrated users table: added auth_provider column and made password_hash nullable');
     }
 
+    // Add phone and bio columns for user profile
+    const phoneColumnCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='users' AND column_name='phone';
+    `);
+
+    if (phoneColumnCheck.rows.length === 0) {
+      await client.query(`
+        ALTER TABLE users 
+        ADD COLUMN phone VARCHAR(50),
+        ADD COLUMN bio TEXT;
+      `);
+      console.log('✅ Added phone and bio columns to users table');
+    }
+
     // Create index on email for faster lookups
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);

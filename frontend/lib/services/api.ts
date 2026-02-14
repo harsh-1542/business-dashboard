@@ -122,6 +122,54 @@ export const authService = {
 };
 
 // ============================================
+// USER SERVICES
+// ============================================
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  phone?: string;
+  bio?: string;
+  isActive: boolean;
+  createdAt: string;
+  authProvider: string;
+}
+
+export const userService = {
+  getProfile: async (): Promise<UserProfile> => {
+    const response = await apiFetch<{ success: boolean; data: { user: UserProfile } }>('/user/profile');
+    return response.data.user;
+  },
+
+  updateProfile: async (data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    bio?: string;
+  }): Promise<UserProfile> => {
+    const response = await apiFetch<{ success: boolean; data: { user: UserProfile } }>('/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data.user;
+  },
+
+  changePassword: async (data: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<{ message: string }> => {
+    const response = await apiFetch<{ success: boolean; message: string }>('/user/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return { message: response.message };
+  },
+};
+
+// ============================================
 // WORKSPACE SERVICES
 // ============================================
 
@@ -513,6 +561,22 @@ export const formService = {
       submittedAt: s.created_at,
     }));
   },
+};
+
+// ============================================
+// INTEGRATION SERVICES
+// ============================================
+
+export const integrationService = {
+  getGoogleAuthUrl: async (workspaceId: string): Promise<string> => {
+    const response = await apiFetch<{ success: boolean; data: { url: string } }>(`/integrations/google/auth/${workspaceId}`);
+    return response.data.url;
+  },
+
+  getIntegrations: async (workspaceId: string): Promise<any[]> => {
+    const response = await apiFetch<{ success: boolean; data: { integrations: any[] } }>(`/integrations/${workspaceId}`);
+    return response.data.integrations;
+  }
 };
 
 export interface Message {

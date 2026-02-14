@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { sendReplyEmail } = require('../services/notification.service');
+const { createAuthFromRefreshToken, sendEmail: sendGmail } = require('../services/gmail.service');
 
 const getConversations = async (req, res, next) => {
   try {
@@ -33,7 +34,9 @@ const getMessages = async (req, res, next) => {
     );
 
     const result = await query(
-      `SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
+      `SELECT id, conversation_id, sender_type, sender_id, channel, content, is_read, sent_at,
+              to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at 
+       FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
       [conversationId]
     );
 
@@ -50,7 +53,7 @@ const replyToConversation = async (req, res, next) => {
     const result = await query(
       `INSERT INTO messages (conversation_id, sender_type, sender_id, channel, content, is_read)
        VALUES ($1, 'staff', $2, 'email', $3, true)
-       RETURNING *`,
+       RETURNING id, conversation_id, sender_type, sender_id, channel, content, is_read, sent_at, to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at`,
       [conversationId, userId, content]
     );
 
@@ -63,7 +66,8 @@ const replyToConversation = async (req, res, next) => {
     // Trigger email sending
     const details = await query(`
         SELECT con.email as contact_email, 
-               w.business_name, 
+               w.business_name,
+               w.id as workspace_id,
                (SELECT email FROM users WHERE id = w.owner_id) as owner_email
         FROM conversations c
         JOIN contacts con ON c.contact_id = con.id
@@ -72,10 +76,38 @@ const replyToConversation = async (req, res, next) => {
     `, [conversationId]);
     
     if (details.rows.length > 0) {
-        const { contact_email, business_name, owner_email } = details.rows[0];
+        const { contact_email, business_name, owner_email, workspace_id } = details.rows[0];
+        
         if (contact_email) {
-             sendReplyEmail(contact_email, content, business_name, owner_email)
-                .catch(err => console.error('Failed to send reply email', err));
+            // Check for Gmail Integration
+            const integration = await query(
+                `SELECT config FROM integrations WHERE workspace_id = $1 AND type = 'email' AND provider = 'gmail' AND is_active = true`,
+                [workspace_id]
+            );
+
+            if (integration.rows.length > 0) {
+                 // Send via Gmail
+                 try {
+                     const config = integration.rows[0].config; 
+                     const refreshToken = config.refresh_token;
+                     
+                     if (refreshToken) {
+                         const auth = createAuthFromRefreshToken(refreshToken);
+                         const subject = `Re: Your conversation with ${business_name}`;
+                         const html = `<div style="font-family: sans-serif;">${content.replace(/\n/g, '<br>')}</div>`;
+                         
+                         await sendGmail(auth, contact_email, subject, html);
+                     } else {
+                         await sendReplyEmail(contact_email, content, business_name, owner_email);
+                     }
+                 } catch (gmailError) {
+                     console.error('Failed to send via Gmail', gmailError);
+                     await sendReplyEmail(contact_email, content, business_name, owner_email);
+                 }
+            } else {
+                 sendReplyEmail(contact_email, content, business_name, owner_email)
+                    .catch(err => console.error('Failed to send reply email', err));
+            }
         }
     }
 

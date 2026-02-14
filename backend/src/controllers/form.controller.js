@@ -398,8 +398,8 @@ const submitPublicForm = async (req, res, next) => {
           // c. Log Submission
           if (form) {
               await client.query(
-                  `INSERT INTO form_submissions (form_id, contact_id, submission_data, status)
-                   VALUES ($1, $2, $3, 'pending')`,
+                  `INSERT INTO form_submissions (form_id, contact_id, submission_data, status, submitted_at)
+                   VALUES ($1, $2, $3, 'pending', CURRENT_TIMESTAMP)`,
                   [form.id, contact.id, JSON.stringify(submissionData)]
               );
               
@@ -452,7 +452,10 @@ const getFormSubmissions = async (req, res, next) => {
     const { formId } = req.params;
 
     const result = await query(
-      `SELECT fs.*, c.first_name, c.last_name, c.email, c.phone 
+      `SELECT fs.*, 
+              to_char(fs.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
+              COALESCE(to_char(fs.submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), to_char(fs.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) as submitted_at,
+              c.first_name, c.last_name, c.email, c.phone 
        FROM form_submissions fs
        JOIN contacts c ON fs.contact_id = c.id
        WHERE fs.form_id = $1
@@ -479,7 +482,10 @@ const getWorkspaceSubmissions = async (req, res, next) => {
     const { workspaceId } = req.params;
 
     const result = await query(
-      `SELECT fs.*, f.name as form_name, c.first_name, c.last_name, c.email, c.phone 
+      `SELECT fs.*, 
+              to_char(fs.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
+              COALESCE(to_char(fs.submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), to_char(fs.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) as submitted_at,
+              f.name as form_name, c.first_name, c.last_name, c.email, c.phone 
        FROM form_submissions fs
        JOIN forms f ON fs.form_id = f.id
        JOIN contacts c ON fs.contact_id = c.id

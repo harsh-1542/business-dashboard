@@ -3,6 +3,7 @@ const router = express.Router();
 
 // Import route modules
 const authRoutes = require('./auth.routes');
+const userRoutes = require('./user.routes');
 const workspaceRoutes = require('./workspace.routes');
 const bookingRoutes = require('./booking.routes');
 const staffRoutes = require('./staff.routes');
@@ -25,6 +26,7 @@ router.get('/health', (req, res) => {
 
 // Mount routes
 router.use('/auth', authRoutes);
+router.use('/user', userRoutes);
 router.use('/workspaces', workspaceRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/staff', staffRoutes);
