@@ -19,12 +19,14 @@ app.set('trust proxy', 1);
 app.use(helmet());
 
 // CORS configuration
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN,
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: [
+    "https://harshshrimali.in",
+    "https://www.harshshrimali.in",
+    "http://localhost:3000"
+  ],
+  credentials: true
+}));
 
 // Rate limiting
 const limiter = rateLimit({
